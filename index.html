@@ -1,0 +1,119 @@
+<!-- Copy this whole block and send it as an HTML file or paste into an email that accepts HTML (works in browsers) -->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>I'm Sorry</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;height:100vh;display:flex;
+         align-items:center;justify-content:center;background:#0f172a;color:#e6eef8}
+    /* card stays visually identical but needs to be a positioned ancestor */
+    .card{padding:2rem;border-radius:12px;background:linear-gradient(135deg,#0b1220, #16202f);
+          box-shadow:0 10px 30px rgba(2,6,23,.6);text-align:center;max-width:540px;position:relative;overflow:visible}
+    .title{font-size:1.6rem;margin-bottom:.5rem}
+    .mono{font-family:monospace;background:rgba(255,255,255,.03);padding:.5rem;border-radius:6px;}
+    .btn{margin-top:1rem;padding:.6rem 1rem;border-radius:8px;border:0;background:#2563eb;color:white;cursor:pointer}
+    .btn:disabled{background:#10b981;cursor:default}
+    .small{opacity:.8;font-size:.9rem;margin-top:.6rem}
+
+    /* Heart styles: absolutely positioned relative to .card; high z-index so they're on top */
+    .heart{position:absolute;font-size:20px;pointer-events:none;transform:translate(-50%,-50%);will-change:transform,opacity;z-index:999}
+    @keyframes floatUp {
+      0%{transform:translate3d(var(--x,0),0) scale(1);opacity:1}
+      100%{transform:translate3d(var(--x,0),-220px) scale(1.6);opacity:0}
+    }
+    @keyframes floatDown {
+      0%{transform:translate3d(var(--x,0),0) scale(1);opacity:1}
+      100%{transform:translate3d(var(--x,0),220px) scale(1.6);opacity:0}
+    }
+  </style>
+</head>
+<body>
+  <div class="card" role="main" aria-live="polite">
+    <div class="title">Apology (v1.0.1)</div>
+    <div class="mono">Hi শুভ্র কাঠগোলাপ,<br>if (I.hurtYou) { I.am.sorry(); I.will.not.Hurt.you.again(); }</div>
+    <div>
+      <button id="acceptBtn" class="btn" aria-pressed="false">Accept?</button>
+    </div>
+    <div id="note" class="small">I don't know the exact bug, but I want to fix it. — You.Know.Who</div>
+  </div>
+
+  <script>
+    (function(){
+      const btn = document.getElementById('acceptBtn');
+      const note = document.getElementById('note');
+      const card = document.querySelector('.card');
+
+      // create one heart. origin: 'top' | 'bottom' | 'random'
+      function makeHeart(origin = 'random'){
+        const heart = document.createElement('div');
+        heart.className = 'heart';
+        // horizontal wiggle expressed for the animation transform
+        heart.style.setProperty('--x', (Math.random()*60 - 30) + 'px');
+
+        // choose horizontal position across the card (10%..90%)
+        const left = (10 + Math.random()*80) + '%';
+        heart.style.left = left;
+
+        // pick origin
+        if(origin === 'random') origin = (Math.random() < 0.5) ? 'top' : 'bottom';
+
+        if(origin === 'top'){
+          // place above the card (negative percentages) so it's outside the top edge
+          heart.style.top = (-10 - Math.random()*30) + '%'; // -10% .. -40%
+          // animate downward so the heart appears popping in from above
+          heart.style.animation = 'floatDown ' + (900 + Math.random()*900) + 'ms ease-out forwards';
+        } else {
+          // place below the card (>100%) so it's outside the bottom edge
+          heart.style.top = (100 + Math.random()*30) + '%'; // 100% .. 130%
+          // animate upward so the heart floats up into/above the card
+          heart.style.animation = 'floatUp ' + (900 + Math.random()*900) + 'ms ease-out forwards';
+        }
+
+        heart.style.fontSize = (18 + Math.random()*80) + 'px';
+        heart.textContent = ['❤️','💗','🎀', '💖', '🎇', '🎆','💕', '🫰' ,'💘', '☕️', '🫖', '🌺'][Math.floor(Math.random()*12)];
+        heart.style.opacity = '0';
+
+        // insert as first child so hearts render above content in DOM stacking (z-index also helps)
+        card.insertBefore(heart, card.firstChild);
+
+        // remove the element when animation finishes
+        setTimeout(()=> heart.remove(), 2600);
+      }
+
+      // burst hearts, optionally specifying whether they originate top/bottom/random
+      function burstHearts(count, delay = 180, origin = 'random'){
+        for(let i=0;i<count;i++){
+          setTimeout(()=> makeHeart(origin === 'random' ? 'random' : origin), i*delay);
+        }
+      }
+
+      btn.addEventListener('click', function(){
+        if(btn.disabled) return;
+        btn.textContent = 'Accepted';
+        btn.disabled = true;
+        btn.setAttribute('aria-pressed','true');
+        note.textContent = 'Thanks for accepting my apology. তুমি একটা pookie 🎀';
+
+        // mix of top-origin and bottom-origin hearts
+        burstHearts(8, 70, 'top');    // quick pop-ins from the top
+        burstHearts(10, 90, 'bottom'); // rising hearts from the bottom
+
+        // gentle follow-up rain (random origin) for a short while
+        let rainCount = 0;
+        const rainTimer = setInterval(()=>{
+          makeHeart('random');
+          rainCount++;
+          if(rainCount > 40) clearInterval(rainTimer);
+        },120);
+      });
+
+      // keyboard activation (space/enter)
+      btn.addEventListener('keydown', function(e){
+        if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); }
+      });
+    })();
+  </script>
+</body>
+</html>
