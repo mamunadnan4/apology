@@ -1,4 +1,3 @@
-<!-- Copy this whole block and send it as an HTML file or paste into an email that accepts HTML (works in browsers) -->
 <!doctype html>
 <html>
 <head>
@@ -6,27 +5,60 @@
   <title>I'm Sorry</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;height:100vh;display:flex;
-         align-items:center;justify-content:center;background:#0f172a;color:#e6eef8}
-    /* card stays visually identical but needs to be a positioned ancestor */
-    .card{padding:2rem;border-radius:12px;background:linear-gradient(135deg,#0b1220, #16202f);
+ body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;height:100vh;display:flex;
+         align-items:center;justify-content:center;background:#F5F5DC;color:#e6eef8;}
+    .card{padding:2rem;border-radius:12px;background:linear-gradient(135deg,#0b1220,#16202f);
           box-shadow:0 10px 30px rgba(2,6,23,.6);text-align:center;max-width:540px;position:relative;overflow:visible}
     .title{font-size:1.6rem;margin-bottom:.5rem}
     .mono{font-family:monospace;background:rgba(255,255,255,.03);padding:.5rem;border-radius:6px;}
-    .btn{margin-top:1rem;padding:.6rem 1rem;border-radius:8px;border:0;background:#2563eb;color:white;cursor:pointer}
-    .btn:disabled{background:#10b981;cursor:default}
+    .btn{margin-top:1rem;padding:.6rem 1rem;border-radius:8px;border:0;background:#2563eb;color:white;cursor:pointer;transition:transform .2s}
+    .btn:hover{transform:scale(1.05)}
+    .btn:disabled{background:#10b981;cursor:default; transition:none; transform:none}
+    .btn.reject{background:#ef4444;margin-left:.5rem}
     .small{opacity:.8;font-size:.9rem;margin-top:.6rem}
 
-    /* Heart styles: absolutely positioned relative to .card; high z-index so they're on top */
-    .heart{position:absolute;font-size:20px;pointer-events:none;transform:translate(-50%,-50%);will-change:transform,opacity;z-index:999}
-    @keyframes floatUp {
-      0%{transform:translate3d(var(--x,0),0) scale(1);opacity:1}
-      100%{transform:translate3d(var(--x,0),-220px) scale(1.6);opacity:0}
+    .heart{position:absolute;font-size:20px;pointer-events:none;
+           transform:translate(-50%,-50%);will-change:transform,opacity;z-index:999}
+    @keyframes floatUp {0%{transform:translate3d(var(--x,0),0) scale(1);opacity:1}
+                        100%{transform:translate3d(var(--x,0),-220px) scale(1.6);opacity:0}}
+    @keyframes floatDown {0%{transform:translate3d(var(--x,0),0) scale(1);opacity:1}
+                          100%{transform:translate3d(var(--x,0),220px) scale(1.6);opacity:0}}
+
+    .popup{position:absolute;background:rgba(0,0,0,0.75);color:white;
+      padding:0.5rem 1rem;border-radius:12px;font-size:1rem;
+      box-shadow:0 4px 12px rgba(0,0,0,0.4);z-index:2000;opacity:0;
+      animation:fadeFloat 2.4s ease-in-out forwards;}
+    @keyframes fadeFloat {0%{opacity:0;transform:translateY(10px);}
+      20%{opacity:1;transform:translateY(0);}80%{opacity:1;}
+      100%{opacity:0;transform:translateY(-10px);} }
+
+    /* video pop-up */
+    .video-popup{
+      position:fixed;
+      top:50%; left:50%;
+      transform:translate(-50%,-50%) scale(0.95);
+      background:rgba(0,0,0,0.9);
+      padding:10px;
+      border-radius:16px;
+      box-shadow:0 0 40px rgba(0,0,0,0.7);
+      z-index:5000;
+      width:380px; 
+      height:auto;
+      opacity:0;
+      animation:fadeIn 0.4s ease-out forwards;
     }
-    @keyframes floatDown {
-      0%{transform:translate3d(var(--x,0),0) scale(1);opacity:1}
-      100%{transform:translate3d(var(--x,0),220px) scale(1.6);opacity:0}
+    .video-popup video{
+      width:100%;border-radius:12px;display:block;
     }
+    .close-btn{
+      position:absolute;top:-12px;right:-12px;
+      background:#ef4444;color:white;
+      border:none;border-radius:50%;
+      width:28px;height:28px;font-size:16px;cursor:pointer;
+      box-shadow:0 2px 8px rgba(0,0,0,0.5);
+    }
+    @keyframes fadeIn{from{opacity:0;transform:translate(-50%,-50%) scale(0.9);}
+                      to{opacity:1;transform:translate(-50%,-50%) scale(1);} }
   </style>
 </head>
 <body>
@@ -35,85 +67,132 @@
     <div class="mono">Hi শুভ্র কাঠগোলাপ,<br>if (I.hurtYou) { I.am.sorry(); I.will.not.Hurt.you.again(); }</div>
     <div>
       <button id="acceptBtn" class="btn" aria-pressed="false">Accept?</button>
+      <button id="rejectBtn" class="btn reject">Reject</button>
     </div>
     <div id="note" class="small">I don't know the exact bug, but I want to fix it. — You.Know.Who</div>
+
+    <audio id="chime" preload="auto">
+      <source src="sajni_htZ34rbd.mp3" type="audio/mpeg">
+    </audio>
   </div>
 
   <script>
-    (function(){
-      const btn = document.getElementById('acceptBtn');
-      const note = document.getElementById('note');
-      const card = document.querySelector('.card');
+  (function(){
+    const btnAccept=document.getElementById('acceptBtn');
+    const btnReject=document.getElementById('rejectBtn');
+    const note=document.getElementById('note');
+    const card=document.querySelector('.card');
+    const chime=document.getElementById('chime');
+    let rejectRainTimer=null, sorryPopTimer=null;
 
-      // create one heart. origin: 'top' | 'bottom' | 'random'
-      function makeHeart(origin = 'random'){
-        const heart = document.createElement('div');
-        heart.className = 'heart';
-        // horizontal wiggle expressed for the animation transform
-        heart.style.setProperty('--x', (Math.random()*60 - 30) + 'px');
-
-        // choose horizontal position across the card (10%..90%)
-        const left = (10 + Math.random()*80) + '%';
-        heart.style.left = left;
-
-        // pick origin
-        if(origin === 'random') origin = (Math.random() < 0.5) ? 'top' : 'bottom';
-
-        if(origin === 'top'){
-          // place above the card (negative percentages) so it's outside the top edge
-          heart.style.top = (-10 - Math.random()*30) + '%'; // -10% .. -40%
-          // animate downward so the heart appears popping in from above
-          heart.style.animation = 'floatDown ' + (900 + Math.random()*900) + 'ms ease-out forwards';
-        } else {
-          // place below the card (>100%) so it's outside the bottom edge
-          heart.style.top = (100 + Math.random()*30) + '%'; // 100% .. 130%
-          // animate upward so the heart floats up into/above the card
-          heart.style.animation = 'floatUp ' + (900 + Math.random()*900) + 'ms ease-out forwards';
-        }
-
-        heart.style.fontSize = (18 + Math.random()*80) + 'px';
-        heart.textContent = ['❤️','💗','🎀', '💖', '🎇', '🎆','💕', '🫰' ,'💘', '☕️', '🫖', '🌺'][Math.floor(Math.random()*12)];
-        heart.style.opacity = '0';
-
-        // insert as first child so hearts render above content in DOM stacking (z-index also helps)
-        card.insertBefore(heart, card.firstChild);
-
-        // remove the element when animation finishes
-        setTimeout(()=> heart.remove(), 2600);
+    function makeHeart(origin='random'){
+      const heart=document.createElement('div');
+      heart.className='heart';
+      heart.style.setProperty('--x',(Math.random()*60-30)+'px');
+      const left=(10+Math.random()*80)+'%';
+      heart.style.left=left;
+      if(origin==='random') origin=(Math.random()<0.5)?'top':'bottom';
+      if(origin==='top'){heart.style.top=(-10-Math.random()*30)+'%';
+        heart.style.animation='floatDown '+(900+Math.random()*900)+'ms ease-out forwards';
+      } else {
+        heart.style.top=(100+Math.random()*30)+'%';
+        heart.style.animation='floatUp '+(900+Math.random()*900)+'ms ease-out forwards';
       }
+      heart.style.fontSize=(18+Math.random()*80)+'px';
+      heart.textContent=['❤️','💗','💖','🎇','🎆','💕','💘','🌸','🌺'][Math.floor(Math.random()*9)];
+      card.insertBefore(heart,card.firstChild);
+      setTimeout(()=>heart.remove(),2600);
+    }
 
-      // burst hearts, optionally specifying whether they originate top/bottom/random
-      function burstHearts(count, delay = 180, origin = 'random'){
-        for(let i=0;i<count;i++){
-          setTimeout(()=> makeHeart(origin === 'random' ? 'random' : origin), i*delay);
-        }
+    // burst hearts, optionally specifying whether they originate top/bottom/random
+    function burstHearts(count, delay = 180, origin = 'random'){
+      for(let i=0;i<count;i++){
+        setTimeout(()=> makeHeart(origin === 'random' ? 'random' : origin), i*delay);
       }
+    }
 
-      btn.addEventListener('click', function(){
-        if(btn.disabled) return;
-        btn.textContent = 'Accepted';
-        btn.disabled = true;
-        btn.setAttribute('aria-pressed','true');
-        note.textContent = 'Thanks for accepting my apology. তুমি একটা pookie 🎀';
+    function spawnSorryPopup(){
+      const popup=document.createElement('div');
+      popup.className='popup';
+      popup.textContent='Sorry 😢';
+      const randomX=10+Math.random()*80;
+      const randomSide=Math.random()<0.5?'top':'bottom';
+      popup.style.top=(randomSide==='top'?(-20-Math.random()*30):(100+Math.random()*30))+'%';
+      popup.style.left=randomX+'%';
+      card.appendChild(popup);
+      setTimeout(()=>popup.remove(),2400);
+    }
 
-        // mix of top-origin and bottom-origin hearts
-        burstHearts(8, 70, 'top');    // quick pop-ins from the top
-        burstHearts(10, 90, 'bottom'); // rising hearts from the bottom
+    function startSorryRain(){
+      if(sorryPopTimer) return;
+      spawnSorryPopup();
+      sorryPopTimer=setInterval(spawnSorryPopup,700);
+    }
 
-        // gentle follow-up rain (random origin) for a short while
-        let rainCount = 0;
-        const rainTimer = setInterval(()=>{
-          makeHeart('random');
-          rainCount++;
-          if(rainCount > 40) clearInterval(rainTimer);
-        },120);
-      });
+    function stopSorryRain(){
+      if(sorryPopTimer){clearInterval(sorryPopTimer);sorryPopTimer=null;}
+      document.querySelectorAll('.popup').forEach(p=>p.remove());
+    }
 
-      // keyboard activation (space/enter)
-      btn.addEventListener('keydown', function(e){
-        if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); }
-      });
-    })();
+function showVideoPopup(){
+  const popup = document.createElement('div');
+  popup.className = 'video-popup';
+  popup.innerHTML = `
+    <button class="close-btn">✖</button>
+    <video autoplay>
+      <source src="kaowa.mp4" type="video/mp4">
+      Your browser does not support video.
+    </video>
+  `;
+  document.body.appendChild(popup);
+
+  const video = popup.querySelector('video');
+  video.play().catch(()=>console.log("Video autoplay blocked"));
+
+  // remove popup when video ends
+  video.addEventListener('ended', () => {
+    popup.remove();
+  });
+
+  const closeBtn = popup.querySelector('.close-btn');
+  closeBtn.addEventListener('click',()=>{
+    popup.remove();
+  });
+}
+
+    // Accept
+    btnAccept.addEventListener('click',function(){
+      if(btnAccept.disabled)return;
+      btnAccept.textContent='Accepted';
+      btnAccept.disabled=true;
+      btnAccept.setAttribute('aria-pressed','true');
+      note.textContent = 'Thanks for accepting my apology. তুমি একটা pookie 🎀';
+      chime.currentTime=0;chime.play();
+      stopSorryRain();
+      document.querySelectorAll('.video-popup').forEach(v=>v.remove());
+      if(btnReject&&btnReject.parentNode)btnReject.remove();
+
+      // mix of top-origin and bottom-origin hearts
+      burstHearts(8, 70, 'top');    // quick pop-ins from the top
+      burstHearts(10, 90, 'bottom'); // rising hearts from the bottom
+
+      // gentle follow-up rain (random origin) for a short while
+      let rainCount = 0;
+      const rainTimer = setInterval(()=>{
+        makeHeart('random');
+        rainCount++;
+        if(rainCount > 500) clearInterval(rainTimer);
+      },120);
+    });
+
+    // Reject
+    btnReject.addEventListener('click',function(){
+      if(btnReject&&btnReject.parentNode)btnReject.remove();
+      startSorryRain();
+      showVideoPopup();
+
+    });
+  })();
   </script>
 </body>
 </html>
